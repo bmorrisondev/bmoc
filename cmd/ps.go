@@ -16,6 +16,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/forPelevin/gomoji"
 	slugify "github.com/gosimple/slug"
 )
 
@@ -32,15 +33,6 @@ var psCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(psCmd)
-
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// psCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
 	psCmd.Flags().StringVarP(&formatDocFlag, "format-doc", "d", "", "Help message for toggle")
 }
 
@@ -72,11 +64,14 @@ func run(cmd *cobra.Command, args []string) {
 			}
 			scanner := bufio.NewScanner(strings.NewReader(string(dat)))
 			skipLine := ""
+			isBuildingInfoBlock := false
+			// infoBlockType := "note"
+			infoBlockTypeWasCaptured := false
 			for scanner.Scan() {
 				line := scanner.Text()
 
 				// Get the title of the post, create necessary directories
-				if strings.HasPrefix(line, "#") {
+				if strings.HasPrefix(line, "# ") {
 					line = strings.Replace(line, "# ", "", 1)
 					title = line
 					slug = slugify.Make(line)
@@ -164,10 +159,38 @@ func run(cmd *cobra.Command, args []string) {
 					continue
 				}
 
+				if line == "<aside>" {
+					isBuildingInfoBlock = true
+					content += "<InfoBlock"
+					continue
+				}
+
+				if isBuildingInfoBlock && !infoBlockTypeWasCaptured {
+					// emoji := string(line[0])
+					emoji := gomoji.FindAll(line)
+					if len(emoji) > 0 && emoji[0].Character == "⚠️" {
+						content += " type=\"warn\">\n\n"
+					} else {
+						content += " type=\"note\">\n\n"
+					}
+					infoBlockTypeWasCaptured = true
+					content += fmt.Sprintf("%v\n\n", line[5:len(line)-1])
+					continue
+				}
+
+				if line == "</aside>" {
+					isBuildingInfoBlock = false
+					infoBlockTypeWasCaptured = false
+					// infoBlockType = "note"
+					content += "</InfoBlock>\n\n"
+					continue
+				}
+
 				// put the content in
 				content += fmt.Sprintf("%v\n\n", line)
 			}
 
+			// Write the content out
 			outcontent := fmt.Sprintf("---\ntitle: %v\nsubtitle: %v\n---\n\n%v", title, subtitle, content)
 			outfile := fmt.Sprintf("%v/index.mdx", outpath)
 			err = os.WriteFile(outfile, []byte(outcontent), 0644)
@@ -175,6 +198,7 @@ func run(cmd *cobra.Command, args []string) {
 				log.Fatal(err)
 			}
 
+			// Write the JSON meta out
 			outjson := fmt.Sprintf("{\n\t\"display\": \"%v\",\n\t\"route\": \"%v\"\n}", title, slug)
 			outjsonfile := fmt.Sprintf("%v/meta.json", outpath)
 			err = os.WriteFile(outjsonfile, []byte(outjson), 0644)
@@ -183,15 +207,15 @@ func run(cmd *cobra.Command, args []string) {
 			}
 
 			//Cleanup
-			err = os.Remove(formatDocFlag)
-			if err != nil {
-				log.Fatal(err)
-			}
+			// err = os.Remove(formatDocFlag)
+			// if err != nil {
+			// 	log.Fatal(err)
+			// }
 
-			err = os.RemoveAll(*path)
-			if err != nil {
-				log.Fatal(err)
-			}
+			// err = os.RemoveAll(*path)
+			// if err != nil {
+			// 	log.Fatal(err)
+			// }
 		}
 	}
 }

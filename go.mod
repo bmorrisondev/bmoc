@@ -8,7 +8,9 @@ require (
 )
 
 require (
+	github.com/forPelevin/gomoji v1.1.4 // indirect
 	github.com/gosimple/unidecode v1.0.1 // indirect
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
+	github.com/rivo/uniseg v0.2.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 )

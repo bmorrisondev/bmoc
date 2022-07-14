@@ -5,14 +5,12 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
 )
 
 func mkDir(path string) error {
-	log.Println("mkdir", path)
 	if _, err := os.Stat(path); errors.Is(err, os.ErrNotExist) {
 		err := os.Mkdir(path, os.ModePerm)
 		return err
@@ -21,7 +19,6 @@ func mkDir(path string) error {
 }
 
 func copy(src, dst string) (int64, error) {
-	log.Println("copy", src, dst)
 	sourceFileStat, err := os.Stat(src)
 	if err != nil {
 		return 0, err
