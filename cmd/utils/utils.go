@@ -1,16 +1,20 @@
-package cmd
+package utils
 
 import (
 	"archive/zip"
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/spf13/viper"
 )
 
-func mkDir(path string) error {
+func MkDir(path string) error {
 	if _, err := os.Stat(path); errors.Is(err, os.ErrNotExist) {
 		err := os.Mkdir(path, os.ModePerm)
 		return err
@@ -18,7 +22,7 @@ func mkDir(path string) error {
 	return nil
 }
 
-func copy(src, dst string) (int64, error) {
+func Copy(src, dst string) (int64, error) {
 	sourceFileStat, err := os.Stat(src)
 	if err != nil {
 		return 0, err
@@ -43,7 +47,7 @@ func copy(src, dst string) (int64, error) {
 	return nBytes, err
 }
 
-func unzipSource(source string) (*string, error) {
+func UnzipSource(source string) (*string, error) {
 	// 1. Open the zip file
 	reader, err := zip.OpenReader(source)
 	if err != nil {
@@ -57,7 +61,7 @@ func unzipSource(source string) (*string, error) {
 	}
 
 	path := strings.Replace(destination, ".zip", "", 1)
-	err = mkDir(path)
+	err = MkDir(path)
 	if err != nil {
 		return nil, err
 	}
@@ -67,7 +71,7 @@ func unzipSource(source string) (*string, error) {
 
 	// 3. Iterate over zip files inside the archive and unzip each of them
 	for _, f := range reader.File {
-		err := unzipFile(f, path)
+		err := UnzipFile(f, path)
 		if err != nil {
 			return nil, err
 		}
@@ -76,7 +80,7 @@ func unzipSource(source string) (*string, error) {
 	return &path, nil
 }
 
-func unzipFile(f *zip.File, destination string) error {
+func UnzipFile(f *zip.File, destination string) error {
 	// 4. Check if file paths are not vulnerable to Zip Slip
 	filePath := filepath.Join(destination, f.Name)
 	if !strings.HasPrefix(filePath, filepath.Clean(destination)+string(os.PathSeparator)) {
@@ -115,7 +119,7 @@ func unzipFile(f *zip.File, destination string) error {
 	return nil
 }
 
-func walkMatch(root, pattern string) ([]string, error) {
+func WalkMatch(root, pattern string) ([]string, error) {
 	var matches []string
 	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
@@ -135,4 +139,69 @@ func walkMatch(root, pattern string) ([]string, error) {
 		return nil, err
 	}
 	return matches, nil
+}
+
+func ConfigKeyValuePairDelete(key string) {
+	DeleteKeyHack(key)
+}
+
+func DeleteKeyHack(key string) {
+	settings := viper.AllSettings()
+	delete(settings, key)
+
+	var parsedSettings string
+	for key, value := range settings {
+		parsedSettings = fmt.Sprintf("%s\n%s: %s", parsedSettings, key, value)
+	}
+
+	d1 := []byte(parsedSettings)
+	HandleError(ioutil.WriteFile(viper.ConfigFileUsed(), d1, 0644))
+}
+
+func ConfigKeyValuePairUpdate(key string, value string) {
+	writeKeyValuePair(key, value)
+}
+
+func ConfigKeyValuePairAdd(key string, value string) {
+	if validateKeyValuePair(key, value) {
+		log.Printf("Validation not met for %s.", key)
+	} else {
+		writeKeyValuePair(key, value)
+	}
+}
+
+func validateKeyValuePair(key string, value string) bool {
+	if len(key) == 0 || len(value) == 0 {
+		fmt.Println("The key and value must both contain contents to write to the configuration file.")
+		return true
+	}
+	// Determine if an existing key, if so notify.
+	if findExistingKey(key) {
+		fmt.Println("This key already exists. Create a key value pair with a different key, or if this is an update use the update command.")
+		return true
+	}
+	return false
+}
+
+func writeKeyValuePair(key string, value interface{}) {
+	viper.Set(key, value)
+	err := viper.WriteConfig()
+	HandleError(err)
+	fmt.Printf("Wrote the %s pair.\n", key)
+}
+
+func findExistingKey(theKey string) bool {
+	existingKey := false
+	for i := 0; i < len(viper.AllKeys()); i++ {
+		if viper.AllKeys()[i] == theKey {
+			existingKey = true
+		}
+	}
+	return existingKey
+}
+
+func HandleError(e error) {
+	if e != nil {
+		fmt.Println(e)
+	}
 }

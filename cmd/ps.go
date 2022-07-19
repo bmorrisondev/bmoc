@@ -5,6 +5,7 @@ Copyright © 2022 NAME HERE <EMAIL ADDRESS>
 package cmd
 
 import (
+	"bmoc/cmd/utils"
 	"bufio"
 	"fmt"
 	"log"
@@ -22,6 +23,7 @@ import (
 
 var (
 	formatDocFlag string
+	noCleanupFlag bool
 )
 
 // psCmd represents the ps command
@@ -33,7 +35,8 @@ var psCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(psCmd)
-	psCmd.Flags().StringVarP(&formatDocFlag, "format-doc", "d", "", "Help message for toggle")
+	psCmd.Flags().StringVarP(&formatDocFlag, "format-doc", "d", "", "Extracts a Notion exported zip & processes for the docs site.")
+	psCmd.Flags().BoolVar(&noCleanupFlag, "no-cleanup", false, "If set, the original & generated temp files will not be deleted.")
 }
 
 func run(cmd *cobra.Command, args []string) {
@@ -41,13 +44,13 @@ func run(cmd *cobra.Command, args []string) {
 		// Unzip the thing
 		outpath := ""
 		imgoutpath := ""
-		path, err := unzipSource(formatDocFlag)
+		path, err := utils.UnzipSource(formatDocFlag)
 		if err != nil {
 			log.Fatal(err)
 		}
 
 		// Read in the doc
-		fileArr, err := walkMatch(*path, "*.md")
+		fileArr, err := utils.WalkMatch(*path, "*.md")
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -65,6 +68,7 @@ func run(cmd *cobra.Command, args []string) {
 			scanner := bufio.NewScanner(strings.NewReader(string(dat)))
 			skipLine := ""
 			isBuildingInfoBlock := false
+			isInChecklist := false
 			// infoBlockType := "note"
 			infoBlockTypeWasCaptured := false
 			for scanner.Scan() {
@@ -86,14 +90,14 @@ func run(cmd *cobra.Command, args []string) {
 						log.Fatal(err)
 					}
 
-					mkDir(outpath)
+					utils.MkDir(outpath)
 					imgoutpath = fmt.Sprintf("%v/%v", outpath, slug)
 					imgoutpath, err = filepath.Abs(imgoutpath)
 					if err != nil {
 						log.Fatal(err)
 					}
 
-					mkDir(imgoutpath)
+					utils.MkDir(imgoutpath)
 					continue
 				}
 
@@ -104,6 +108,41 @@ func run(cmd *cobra.Command, args []string) {
 					continue
 				}
 
+				if strings.HasPrefix(line, "**Checklist") {
+					isInChecklist = true
+					continue
+				}
+
+				if isInChecklist && line != "---" {
+					continue
+				}
+
+				if isInChecklist && line == "---" {
+					isInChecklist = false
+					continue
+				}
+
+				// TODO: this will have to be implemented when I hit the API directly
+				// Inline block links have the hash values removed, so I cant pull this off
+				// Replace Notion block links
+				// r, err := regexp.Compile(`\((.*)\)`)
+				// if err != nil {
+				// 	log.Fatal(err)
+				// }
+
+				// found := r.FindAllString(line, 1)
+				// for _, el := range found {
+				// 	str := strings.Replace(el, "(", "", 1)
+				// 	str = strings.Replace(str, ")", "", 1)
+				// 	if strings.HasPrefix(str, "https://www.notion.so") {
+				// 		href := services.GetHeaderBlockText(str)
+				// 		if href != nil {
+				// 			content = strings.Replace(content, el, *href, 1)
+				// 		}
+				// 	}
+				// }
+
+				// Handle images
 				if strings.HasPrefix(line, "![") {
 					imgPath := ""
 					imgSlug := ""
@@ -121,6 +160,9 @@ func run(cmd *cobra.Command, args []string) {
 						imgAlt = found[0]
 						imgAlt = strings.Replace(imgAlt, "![", "", 1)
 						imgAlt = strings.Replace(imgAlt, "]", "", 1)
+						if strings.HasPrefix(imgAlt, "capture_") || strings.HasPrefix(imgAlt, "Untitled") {
+							log.Println(fmt.Sprintf("WARN: Found possible uncaptioned image: %v", imgAlt))
+						}
 						imgSlug = slugify.Make(imgAlt)
 					}
 
@@ -142,7 +184,7 @@ func run(cmd *cobra.Command, args []string) {
 						imgExt = splitPath[len(splitPath)-1]
 						imgExt = strings.Replace(imgExt, ")", "", 1)
 
-						_, err := copy(imgPath, fmt.Sprintf("%v/%v.%v", imgoutpath, imgSlug, imgExt))
+						_, err := utils.Copy(imgPath, fmt.Sprintf("%v/%v.%v", imgoutpath, imgSlug, imgExt))
 						if err != nil {
 							log.Fatal(err)
 						}
@@ -169,12 +211,13 @@ func run(cmd *cobra.Command, args []string) {
 					// emoji := string(line[0])
 					emoji := gomoji.FindAll(line)
 					if len(emoji) > 0 && emoji[0].Character == "⚠️" {
-						content += " type=\"warn\">\n\n"
+						content += " type=\"warning\">\n\n"
+						content += fmt.Sprintf("%v\n\n", line[6:len(line)-1])
 					} else {
 						content += " type=\"note\">\n\n"
+						content += fmt.Sprintf("%v\n\n", line[5:len(line)-1])
 					}
 					infoBlockTypeWasCaptured = true
-					content += fmt.Sprintf("%v\n\n", line[5:len(line)-1])
 					continue
 				}
 
@@ -186,7 +229,7 @@ func run(cmd *cobra.Command, args []string) {
 					continue
 				}
 
-				// put the content in
+				// Standard content
 				content += fmt.Sprintf("%v\n\n", line)
 			}
 
@@ -207,15 +250,17 @@ func run(cmd *cobra.Command, args []string) {
 			}
 
 			//Cleanup
-			// err = os.Remove(formatDocFlag)
-			// if err != nil {
-			// 	log.Fatal(err)
-			// }
+			if !noCleanupFlag {
+				err = os.Remove(formatDocFlag)
+				if err != nil {
+					log.Fatal(err)
+				}
 
-			// err = os.RemoveAll(*path)
-			// if err != nil {
-			// 	log.Fatal(err)
-			// }
+				err = os.RemoveAll(*path)
+				if err != nil {
+					log.Fatal(err)
+				}
+			}
 		}
 	}
 }

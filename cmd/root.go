@@ -5,12 +5,16 @@ Copyright © 2022 NAME HERE <EMAIL ADDRESS>
 package cmd
 
 import (
+	"fmt"
+	"log"
 	"os"
+	"os/user"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
-
+var configFile string
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
@@ -37,15 +41,23 @@ func Execute() {
 }
 
 func init() {
-	// Here you will define your flags and configuration settings.
-	// Cobra supports persistent flags, which, if defined here,
-	// will be global for your application.
-
-	// rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.bmoc.yaml)")
-
-	// Cobra also supports local flags, which will only run
-	// when this action is called directly.
-	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	// Import config
+	initConfig()
 }
 
+func initConfig() {
+	myself, err := user.Current()
+	if err != nil {
+		log.Fatal(err)
+	}
 
+	configFile = fmt.Sprintf("%v/.bmoc.yml", myself.HomeDir)
+	viper.SetConfigType("yaml")
+	viper.SetConfigFile(configFile)
+
+	viper.AutomaticEnv()
+
+	if err := viper.ReadInConfig(); err == nil {
+		fmt.Println("Using configuration file: ", viper.ConfigFileUsed())
+	}
+}
