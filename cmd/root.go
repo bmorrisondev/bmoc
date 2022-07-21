@@ -57,7 +57,8 @@ func initConfig() {
 
 	viper.AutomaticEnv()
 
-	if err := viper.ReadInConfig(); err == nil {
-		fmt.Println("Using configuration file: ", viper.ConfigFileUsed())
+	err = viper.ReadInConfig()
+	if err != nil {
+		log.Fatal("Unable to load configuration file")
 	}
 }

@@ -6,13 +6,13 @@ import (
 	"log"
 	"strings"
 
-	gonotion "github.com/dstotijn/go-notion"
+	"github.com/dstotijn/go-notion"
 	"github.com/pkg/errors"
 	"github.com/spf13/viper"
 )
 
 var (
-	client *gonotion.Client
+	client *notion.Client
 )
 
 func setup() {
@@ -20,7 +20,7 @@ func setup() {
 	if notionKey == "" {
 		log.Fatal("ERROR: Config 'NOTION_KEY' is required to be set.")
 	}
-	client = gonotion.NewClient(notionKey)
+	client = notion.NewClient(notionKey)
 }
 
 func GetHeaderBlockText(blockUrl string) *string {
@@ -36,17 +36,17 @@ func GetHeaderBlockText(blockUrl string) *string {
 	return &bl.ChildPage.Title
 }
 
-func ListDraftArticles() ([]gonotion.Page, error) {
+func ListDraftArticles() ([]notion.Page, error) {
 	setup()
 	dbid := viper.GetString("NOTION_CONTENT_DB")
 	if dbid == "" {
 		log.Fatal("ERROR: Config 'NOTION_CONTENT_DB' is required to be set.")
 	}
 
-	filter := gonotion.DatabaseQuery{
-		Filter: &gonotion.DatabaseQueryFilter{
+	filter := notion.DatabaseQuery{
+		Filter: &notion.DatabaseQueryFilter{
 			Property: "Status",
-			Select: &gonotion.SelectDatabaseQueryFilter{
+			Select: &notion.SelectDatabaseQueryFilter{
 				Equals: "Draft In Progress",
 			},
 		},

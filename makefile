@@ -4,3 +4,6 @@ build:
 
 tidy:
 	go mod tidy -compat=1.17
+
+install:
+	go install .
