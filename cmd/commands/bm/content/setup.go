@@ -11,26 +11,6 @@ import (
 
 type ProjectTask map[string][]string
 
-var projectTasks map[string][]string = map[string][]string{
-	"Write draft":                     nil,
-	"Featured image linked & created": nil,
-	"Icon linked":                     nil,
-	"GitHub set up": {
-		"Readme created",
-		"Website link added",
-		"Add link to YouTube video",
-	},
-	"Draft uploaded to WordPress": nil,
-	"Processed through Grammarly": nil,
-	"Published article reviewed": {
-		"Code is properly highlighted",
-		"Files are bolded",
-		"If the article is in a series, that info is properly populated as well",
-		"Looks good on mobile & desktop viewports",
-	},
-	"Tweets written & scheduled": nil,
-}
-
 var SetupCommand = &cobra.Command{
 	Use:   "setup",
 	Short: "Sets up a content item for management.",
@@ -60,5 +40,5 @@ var SetupCommand = &cobra.Command{
 }
 
 func callback(contentItemId string) {
-	services.SetupDoc(contentItemId, projectTasks)
+	services.SetupDoc(contentItemId)
 }

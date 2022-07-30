@@ -1,6 +1,0 @@
-make --dry-run --always-make --keep-going --print-directory
-make: Entering directory `/Users/brian/Documents/Repos/bmoc'
-go build -o ./dist/ .
-chmod +x ./dist/bmoc
-make: Leaving directory `/Users/brian/Documents/Repos/bmoc'
- 

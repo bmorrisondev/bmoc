@@ -1,6 +1,7 @@
 package services
 
 import (
+	"bmoc/cmd/models"
 	"bmoc/cmd/utils"
 	"context"
 	"fmt"
@@ -104,7 +105,7 @@ func ListContentItems(status *string, area *string) ([]notion.Page, error) {
 	return res.Results, nil
 }
 
-func SetupDoc(contentItemId string, projectTasks map[string][]string) {
+func SetupDoc(contentItemId string) {
 	setup()
 
 	// Get it again
@@ -114,13 +115,27 @@ func SetupDoc(contentItemId string, projectTasks map[string][]string) {
 	}
 	props := page.Properties.(notion.DatabasePageProperties)
 	pageName := props["Name"].Title[0].PlainText
+	areaId := props["Area"].Relation[0].ID
+	types := []string{}
+	for _, el := range props["Type"].MultiSelect {
+		types = append(types, el.Name)
+	}
+
+	area, err := client.FindPageByID(context.TODO(), areaId)
+	if err != nil {
+		log.Fatal(err)
+	}
+	areaProps := area.Properties.(notion.DatabasePageProperties)
+	areaName := areaProps["Name"].Title[0].PlainText
+
+	projectTasks := models.BuildProjectTaskList(areaName, types)
 
 	// Update page with icon & draft status
 	updParams := notion.UpdatePageParams{
 		// TODO: Grab the icon from the Area and apply it here
-		// Icon: &notion.Icon{
-		// 	File: page.Icon.File,
-		// },
+		Icon: &notion.Icon{
+			File: area.Icon.File,
+		},
 		DatabasePageProperties: notion.DatabasePageProperties{
 			"Status": notion.DatabasePageProperty{
 				Select: &notion.SelectOptions{

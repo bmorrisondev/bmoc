@@ -16,24 +16,6 @@ var SetupDocCmd = &cobra.Command{
 	Run:   run,
 }
 
-type ProjectTask map[string][]string
-
-var projectTasks map[string][]string = map[string][]string{
-	"Write draft": nil,
-	"Perform self review": {
-		"Adheres to content guide",
-		"Run through Grammarly",
-		"All images have captions",
-	},
-	"Request review": {
-		"Export to zip & process w/bmoc",
-		"Created PR",
-		"Tag Holly & legal",
-	},
-	"Cleanup old resources": nil,
-	"Notify Jenn":           nil,
-}
-
 func run(cmd *cobra.Command, args []string) {
 	/* List PlanetScale docs in Notion
 	- filters: Area = PlanetScale, Status = Selected
@@ -82,5 +64,5 @@ func run(cmd *cobra.Command, args []string) {
 }
 
 func callback(contentItemId string) {
-	services.SetupDoc(contentItemId, projectTasks)
+	services.SetupDoc(contentItemId)
 }
