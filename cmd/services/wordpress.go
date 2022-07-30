@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -27,6 +28,10 @@ type WordPressClient struct {
 
 func (c *WordPressClient) GetToken() string {
 	return base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf("%v:%v", c.Username, c.Password)))
+}
+
+func (c *WordPressClient) CreatePage() error {
+	return errors.New("not implemented")
 }
 
 // TODO: Better error handling

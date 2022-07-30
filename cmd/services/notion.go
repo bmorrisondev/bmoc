@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/dstotijn/go-notion"
+	"github.com/gosimple/slug"
 	"github.com/pkg/errors"
 	"github.com/spf13/viper"
 )
@@ -247,4 +248,79 @@ func SetupDoc(contentItemId string) {
 			log.Fatal(err)
 		}
 	}
+}
+
+func NotionToWordPressPage(pageId string) models.WordPressPageDTO {
+	setup()
+	dto := models.WordPressPageDTO{
+		ImagesToUpload: []models.WordPressMediaDTO{},
+	}
+
+	// Get the page from Notion
+
+	page, err := client.FindPageByID(context.TODO(), pageId)
+	if err != nil {
+		log.Fatal(err)
+	}
+	props := page.Properties.(notion.DatabasePageProperties)
+	if len(props["Excerpt"].RichText) > 0 {
+		dto.Excerpt = props["Excerpt"].RichText[0].PlainText
+	}
+
+	blocks, err := client.FindBlockChildrenByID(context.TODO(), pageId, nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Iterate over each block and create html
+	for _, el := range blocks.Results {
+		if el.Type == notion.BlockTypeHeading1 {
+			dto.HTML += fmt.Sprintf("<h1>%v</h1>\n", el.Heading1.Text[0].PlainText)
+			continue
+		}
+
+		if el.Type == notion.BlockTypeHeading2 {
+			dto.HTML += fmt.Sprintf("<h2>%v</h2>\n", el.Heading2.Text[0].PlainText)
+			continue
+		}
+
+		if el.Type == notion.BlockTypeImage {
+			imgdto := models.WordPressMediaDTO{
+				OriginalUrl: el.Image.File.URL,
+			}
+			if len(el.Image.Caption) > 0 {
+				imgdto.Name = el.Image.Caption[0].PlainText
+				imgdto.Slug = slug.Make(imgdto.Name)
+			}
+			imgdto.Tag = fmt.Sprintf("{{%v}}", imgdto.Slug)
+			dto.HTML += imgdto.Tag + "\n"
+			dto.ImagesToUpload = append(dto.ImagesToUpload, imgdto)
+			continue
+		}
+
+		if el.Type == notion.BlockTypeParagraph && len(el.Paragraph.Text) > 0 {
+			dto.HTML += "<p>"
+			for _, ptext := range el.Paragraph.Text {
+				if ptext.Annotations.Bold {
+					dto.HTML += fmt.Sprintf("<b>%v</b>", ptext.PlainText)
+					continue
+				}
+
+				if ptext.Annotations.Italic {
+					dto.HTML += fmt.Sprintf("<i>%v</i>", ptext.PlainText)
+					continue
+				}
+
+				if ptext.Annotations.Code {
+					// TODO: figure this one out
+					continue
+				}
+
+				dto.HTML += ptext.PlainText
+			}
+			dto.HTML += "</p>\n"
+		}
+	}
+
+	return dto
 }
