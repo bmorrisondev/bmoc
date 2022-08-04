@@ -60,6 +60,7 @@ var planetscaleDocTasks map[string][]string = map[string][]string{
 		"Adheres to content guide",
 		"Run through Grammarly",
 		"All images have captions",
+		"Interactable elements are bolded & quoted",
 	},
 	"Request review": {
 		"Export to zip & process w/bmoc",
@@ -68,6 +69,18 @@ var planetscaleDocTasks map[string][]string = map[string][]string{
 	},
 	"Cleanup old resources": nil,
 	"Notify Jenn":           nil,
+}
+
+var planetscaleArticlesTasks map[string][]string = map[string][]string{
+	"Write draft":              nil,
+	"Featured image requested": nil,
+	"Perform self review": {
+		"Adheres to content guide",
+		"Run through Grammarly",
+		"All images have captions",
+		"Interactable elements are bolded & quoted",
+	},
+	"Draft uploaded to GitHub, review PR created": nil,
 }
 
 func BuildProjectTaskList(area string, contentTypes []string) map[string][]string {
@@ -98,6 +111,13 @@ func BuildProjectTaskList(area string, contentTypes []string) map[string][]strin
 				projectTasks[k] = v
 			}
 		}
+
+		if contains(contentTypes, "Article") {
+			for k, v := range creatorArticleTasks {
+				projectTasks[k] = v
+			}
+		}
+
 	}
 	return projectTasks
 }

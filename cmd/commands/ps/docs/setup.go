@@ -64,5 +64,5 @@ func run(cmd *cobra.Command, args []string) {
 }
 
 func callback(contentItemId string) {
-	services.SetupDoc(contentItemId)
+	services.SetupContentProject(contentItemId)
 }

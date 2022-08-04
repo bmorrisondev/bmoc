@@ -40,18 +40,21 @@ var MigrateCommand = &cobra.Command{
 func migrateCommandCallback(pageId string) {
 	// Get DTO
 	dto := services.NotionToWordPressPage(pageId)
-	log.Println(dto.HTML)
 
 	// Send images to WordPress & update html
 	wpclient := container.GetWordPressClient()
 	for _, el := range dto.ImagesToUpload {
+		if el.Slug == "" {
+			continue
+		}
 		uplurl, err := wpclient.UploadMediaFromUrl(el.OriginalUrl, el.Name, el.Name)
 		if err != nil {
 			log.Fatal(err)
 		}
-		replaceWith := fmt.Sprintf(`<figure class="wp-block-image size-full"><img loading="lazy" src="%v" alt="%v"><figcaption>%v</figcaption></figure>`, uplurl, el.Name, el.Name)
+		replaceWith := fmt.Sprintf(`<figure class="wp-block-image size-full"><img loading="lazy" src="%v" alt="%v"><figcaption>%v</figcaption></figure>`, *uplurl, el.Name, el.Name)
 		dto.HTML = strings.Replace(dto.HTML, el.Tag, replaceWith, 1)
 	}
+	log.Println(dto.HTML)
 
 	// Send post to WordPress
 }

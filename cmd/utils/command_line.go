@@ -12,6 +12,7 @@ type Choice struct {
 }
 
 type Options struct {
+	Title    string
 	Choices  []Choice
 	Cursor   int
 	Callback func(key string)
@@ -23,7 +24,7 @@ func (m Options) Init() tea.Cmd {
 }
 
 func (o Options) View() string {
-	s := "What article should be pushed to WordPress?\n\n"
+	s := fmt.Sprintf("%v\n\n", o.Title)
 
 	for i, choice := range o.Choices {
 		cursor := " "

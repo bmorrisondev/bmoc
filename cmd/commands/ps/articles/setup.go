@@ -1,4 +1,4 @@
-package content
+package articles
 
 import (
 	"bmoc/cmd/services"
@@ -9,14 +9,15 @@ import (
 	"github.com/spf13/cobra"
 )
 
-type ProjectTask map[string][]string
-
 var SetupCommand = &cobra.Command{
-	Use:   "setup",
-	Short: "Sets up a content item for management.",
+	Use: "setup",
+	Aliases: []string{
+		"s",
+	},
+	Short: "Sets up the project in Notion for a selected article",
 	Run: func(cmd *cobra.Command, args []string) {
 
-		area := utils.GetConfigString("NOTION_AREA_CREATOR", true)
+		area := utils.GetConfigString("NOTION_AREA_PLANETSCALE", true)
 		status := "Selected"
 		pages, err := services.ListContentItems(&status, &area)
 		if err != nil {
@@ -24,8 +25,9 @@ var SetupCommand = &cobra.Command{
 		}
 
 		opts := utils.Options{
+			Title:    "Setup article project:",
 			Choices:  []utils.Choice{},
-			Callback: callback,
+			Callback: setupCommandCallback,
 		}
 
 		for _, el := range pages {
@@ -39,6 +41,6 @@ var SetupCommand = &cobra.Command{
 	},
 }
 
-func callback(contentItemId string) {
+func setupCommandCallback(contentItemId string) {
 	services.SetupContentProject(contentItemId)
 }

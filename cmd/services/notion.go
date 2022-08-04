@@ -106,7 +106,7 @@ func ListContentItems(status *string, area *string) ([]notion.Page, error) {
 	return res.Results, nil
 }
 
-func SetupDoc(contentItemId string) {
+func SetupContentProject(contentItemId string) {
 	setup()
 
 	// Get it again
@@ -134,9 +134,9 @@ func SetupDoc(contentItemId string) {
 	// Update page with icon & draft status
 	updParams := notion.UpdatePageParams{
 		// TODO: Grab the icon from the Area and apply it here
-		Icon: &notion.Icon{
-			File: area.Icon.File,
-		},
+		// Icon: &notion.Icon{
+		// 	File: area.Icon.File,
+		// },
 		DatabasePageProperties: notion.DatabasePageProperties{
 			"Status": notion.DatabasePageProperty{
 				Select: &notion.SelectOptions{
@@ -206,6 +206,16 @@ func SetupDoc(contentItemId string) {
 				"Sprint Status": notion.DatabasePageProperty{
 					Select: &notion.SelectOptions{
 						Name: "To Do",
+					},
+				},
+				"Status": notion.DatabasePageProperty{
+					Select: &notion.SelectOptions{
+						Name: "Next Action",
+					},
+				},
+				"Context": notion.DatabasePageProperty{
+					Select: &notion.SelectOptions{
+						Name: "💻.  Computer",
 					},
 				},
 				"Project": notion.DatabasePageProperty{

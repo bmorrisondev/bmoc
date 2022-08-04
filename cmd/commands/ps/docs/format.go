@@ -23,7 +23,7 @@ var (
 
 // PsCmd represents the ps command
 var FormatCmd = &cobra.Command{
-	Use:   "use",
+	Use:   "format",
 	Short: "short description",
 	Run: func(cmd *cobra.Command, args []string) {
 		if formatDocFlag == "" {
