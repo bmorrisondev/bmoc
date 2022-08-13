@@ -138,6 +138,9 @@ func SetupContentProject(contentItemId string) {
 
 	// Create project
 	projectPage, err := createContentProject(projectName, contentItemId)
+	if err != nil {
+		log.Fatal(err)
+	}
 	log.Println("Created project:", projectPage.ID)
 
 	// Create tasks
