@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/dstotijn/go-notion"
+	"github.com/gosimple/slug"
 	"github.com/spf13/cobra"
 )
 
@@ -47,6 +48,7 @@ func migrateCommandCallback(pageId string) {
 		if el.Slug == "" {
 			continue
 		}
+		// TODO: Need to get the id of the returned image so I can link them in the post
 		uplurl, err := wpclient.UploadMediaFromUrl(el.OriginalUrl, el.Name, el.Name)
 		if err != nil {
 			log.Fatal(err)
@@ -57,4 +59,20 @@ func migrateCommandCallback(pageId string) {
 	log.Println(dto.HTML)
 
 	// Send post to WordPress
+	req := services.WPPagePostRequest{
+		Date:     "2022-08-13T00:00:00",
+		Slug:     slug.Make(dto.Title),
+		Status:   "publish",
+		Title:    dto.Title,
+		Content:  dto.HTML,
+		AuthorId: 2,
+		Excerpt:  dto.Excerpt,
+	}
+	log.Println(req)
+	_, err := wpclient.CreatePost(req)
+	if err != nil {
+		log.Fatal(err)
+	}
+	// TODO: better message here, maybe open it in wp right away
+	log.Println("Done!")
 }

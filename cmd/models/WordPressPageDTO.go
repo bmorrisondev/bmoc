@@ -3,6 +3,7 @@ package models
 type WordPressPageDTO struct {
 	HTML           string
 	Excerpt        string
+	Title          string
 	ImagesToUpload []WordPressMediaDTO
 }
 

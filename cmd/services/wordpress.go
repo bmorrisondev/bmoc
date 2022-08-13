@@ -5,10 +5,10 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"mime/multipart"
 	"net/http"
 	"os"
@@ -30,8 +30,31 @@ func (c *WordPressClient) GetToken() string {
 	return base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf("%v:%v", c.Username, c.Password)))
 }
 
-func (c *WordPressClient) CreatePage() error {
-	return errors.New("not implemented")
+func (c *WordPressClient) CreatePost(request WPPagePostRequest) (*WPPagePostResponse, error) {
+	url := fmt.Sprintf("%v/posts", c.BaseUrl)
+	jbytes, err := json.Marshal(request)
+	if err != nil {
+		return nil, err
+	}
+	body := bytes.NewReader(jbytes)
+
+	hc := http.Client{}
+	req, _ := http.NewRequest("POST", url, body)
+	req.Header.Add("Authorization", fmt.Sprintf("Basic %v", c.GetToken()))
+	res, err := hc.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer res.Body.Close()
+	if res.StatusCode > 299 || res.StatusCode < 200 {
+		body, err := ioutil.ReadAll(res.Body)
+		if err != nil {
+			return nil, err
+		}
+		log.Println(string(body))
+	}
+
+	return nil, nil
 }
 
 // TODO: Better error handling
@@ -130,4 +153,21 @@ type WordPressUploadMediaResponse struct {
 type WordPressUpdateMediaRequest struct {
 	AltText string `json:"alt_text"`
 	Caption string `json:"caption"`
+}
+
+type WPPagePostRequest struct {
+	Date            string `json:"date"`
+	Slug            string `json:"slug"`
+	Status          string `json:"status"`
+	Title           string `json:"title"`
+	Content         string `json:"content"`
+	AuthorId        int    `json:"author"`
+	Excerpt         string `json:"excerpt"`
+	FeaturedMediaId *int   `json:"featured_media"`
+
+	// TODO: Implement custom post fields
+}
+
+type WPPagePostResponse struct {
+	Id int `json:"id"`
 }
