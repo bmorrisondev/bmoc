@@ -258,6 +258,28 @@ func SetupContentProject(contentItemId string) {
 			log.Fatal(err)
 		}
 	}
+
+	// if folderPath != nil {
+	// 	// Get current iterator by area
+	// 	dbid = utils.GetConfigString("NOTION_ITERATOR_DB", true)
+	// 	results, err := client.QueryDatabase(context.Background(), dbid, &notion.DatabaseQuery{
+	// 		Filter: &notion.DatabaseQueryFilter{
+	// 			Property: "Area",
+	// 			Relation: &notion.RelationDatabaseQueryFilter{
+	// 				Contains: areaId,
+	// 			},
+	// 		},
+	// 	})
+	// 	if err != nil {
+	// 		log.Fatal(err)
+	// 	}
+	// 	if len(results.Results) >= 1 {
+
+	// 	}
+	// 	iterationProps := iteration.Properties.(notion.DatabasePageProperties)
+	// 	// Copy content template folder
+
+	// }
 }
 
 func NotionToWordPressPage(pageId string) models.WordPressPageDTO {
