@@ -72,8 +72,10 @@ var planetscaleDocTasks map[string][]string = map[string][]string{
 }
 
 var planetscaleArticlesTasks map[string][]string = map[string][]string{
-	"Write draft":              nil,
-	"Featured image requested": nil,
+	"Write draft": nil,
+	"Featured image requested": {
+		"https://github.com/planetscale/brand/issues/new/choose",
+	},
 	"Perform self review": {
 		"Adheres to content guide",
 		"Run through Grammarly",
@@ -107,13 +109,13 @@ func BuildProjectTaskList(area string, contentTypes []string) map[string][]strin
 
 	if area == "PlanetScale" {
 		if contains(contentTypes, "Doc") {
-			for k, v := range creatorArticleTasks {
+			for k, v := range planetscaleDocTasks {
 				projectTasks[k] = v
 			}
 		}
 
 		if contains(contentTypes, "Article") {
-			for k, v := range creatorArticleTasks {
+			for k, v := range planetscaleArticlesTasks {
 				projectTasks[k] = v
 			}
 		}

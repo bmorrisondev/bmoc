@@ -14,4 +14,5 @@ var ArticlesCommand = &cobra.Command{
 
 func init() {
 	ArticlesCommand.AddCommand(SetupCommand)
+	ArticlesCommand.AddCommand(FormatCommand)
 }

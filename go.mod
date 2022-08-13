@@ -11,6 +11,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/spf13/cobra v1.5.0
 	github.com/spf13/viper v1.12.0
+	github.com/teris-io/shortid v0.0.0-20220617161101-71ec9f2aa569
 )
 
 require (

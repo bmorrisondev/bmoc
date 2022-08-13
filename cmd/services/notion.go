@@ -109,19 +109,20 @@ func ListContentItems(status *string, area *string) ([]notion.Page, error) {
 func SetupContentProject(contentItemId string) {
 	setup()
 
-	// Get it again
+	// Get the Content Item page
 	page, err := client.FindPageByID(context.TODO(), contentItemId)
 	if err != nil {
 		log.Fatal(err)
 	}
 	props := page.Properties.(notion.DatabasePageProperties)
-	pageName := props["Name"].Title[0].PlainText
+	projectName := props["Name"].Title[0].PlainText
 	areaId := props["Area"].Relation[0].ID
 	types := []string{}
 	for _, el := range props["Type"].MultiSelect {
 		types = append(types, el.Name)
 	}
 
+	// Get the Area Page
 	area, err := client.FindPageByID(context.TODO(), areaId)
 	if err != nil {
 		log.Fatal(err)
@@ -129,9 +130,27 @@ func SetupContentProject(contentItemId string) {
 	areaProps := area.Properties.(notion.DatabasePageProperties)
 	areaName := areaProps["Name"].Title[0].PlainText
 
-	projectTasks := models.BuildProjectTaskList(areaName, types)
-
 	// Update page with icon & draft status
+	_, err = updateContentItemPage(contentItemId)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Create project
+	projectPage, err := createContentProject(projectName, contentItemId)
+	log.Println("Created project:", projectPage.ID)
+
+	// Create tasks
+	projectTasks := models.BuildProjectTaskList(areaName, types)
+	for task, subtasks := range projectTasks {
+		_, err = createContentItemTask(projectPage.ID, contentItemId, task, subtasks)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+}
+
+func updateContentItemPage(contentItemId string) (notion.Page, error) {
 	updParams := notion.UpdatePageParams{
 		// TODO: Grab the icon from the Area and apply it here
 		// Icon: &notion.Icon{
@@ -145,13 +164,10 @@ func SetupContentProject(contentItemId string) {
 			},
 		},
 	}
-	_, err = client.UpdatePage(context.TODO(), contentItemId, updParams)
-	if err != nil {
-		log.Println("Updating page")
-		log.Fatal(err)
-	}
+	return client.UpdatePage(context.TODO(), contentItemId, updParams)
+}
 
-	// Create project
+func createContentProject(projectName, contentItemId string) (notion.Page, error) {
 	dbid := utils.GetConfigString("NOTION_PROJECTS_DB", true)
 	params := notion.CreatePageParams{
 		ParentType: notion.ParentTypeDatabase,
@@ -161,7 +177,7 @@ func SetupContentProject(contentItemId string) {
 				Title: []notion.RichText{
 					{
 						Text: &notion.Text{
-							Content: pageName,
+							Content: projectName,
 						},
 					},
 				},
@@ -169,6 +185,11 @@ func SetupContentProject(contentItemId string) {
 			"Status": notion.DatabasePageProperty{
 				Select: &notion.SelectOptions{
 					Name: "Active",
+				},
+			},
+			"Type": notion.DatabasePageProperty{
+				Select: &notion.SelectOptions{
+					Name: "Content",
 				},
 			},
 			"Content Item": notion.DatabasePageProperty{
@@ -181,85 +202,85 @@ func SetupContentProject(contentItemId string) {
 		},
 	}
 
-	projectPage, err := client.CreatePage(context.TODO(), params)
-	if err != nil {
-		log.Panic(err)
-	}
-	log.Println("Created project:", projectPage.ID)
+	return client.CreatePage(context.TODO(), params)
+}
 
-	// Create tasks
-	dbid = utils.GetConfigString("NOTION_TASKS_DB", true)
-	for task, subtasks := range projectTasks {
-		params = notion.CreatePageParams{
-			ParentType: notion.ParentTypeDatabase,
-			ParentID:   dbid,
-			DatabasePageProperties: &notion.DatabasePageProperties{
-				"Name": notion.DatabasePageProperty{
-					Title: []notion.RichText{
-						{
-							Text: &notion.Text{
-								Content: task,
-							},
-						},
-					},
-				},
-				"Sprint Status": notion.DatabasePageProperty{
-					Select: &notion.SelectOptions{
-						Name: "To Do",
-					},
-				},
-				"Status": notion.DatabasePageProperty{
-					Select: &notion.SelectOptions{
-						Name: "Next Action",
-					},
-				},
-				"Context": notion.DatabasePageProperty{
-					Select: &notion.SelectOptions{
-						Name: "💻.  Computer",
-					},
-				},
-				"Project": notion.DatabasePageProperty{
-					Relation: []notion.Relation{
-						{
-							ID: projectPage.ID,
-						},
-					},
-				},
-				"Content Item": notion.DatabasePageProperty{
-					Relation: []notion.Relation{
-						{
-							ID: contentItemId,
+func createContentItemTask(projectId string, contentItemId string, task string, subtasks []string) (notion.Page, error) {
+	dbid := utils.GetConfigString("NOTION_TASKS_DB", true)
+	isChecked := true
+	params := notion.CreatePageParams{
+		ParentType: notion.ParentTypeDatabase,
+		ParentID:   dbid,
+		DatabasePageProperties: &notion.DatabasePageProperties{
+			"Name": notion.DatabasePageProperty{
+				Title: []notion.RichText{
+					{
+						Text: &notion.Text{
+							Content: task,
 						},
 					},
 				},
 			},
-		}
+			"Sprint Status": notion.DatabasePageProperty{
+				Select: &notion.SelectOptions{
+					Name: "To Do",
+				},
+			},
+			"Status": notion.DatabasePageProperty{
+				Select: &notion.SelectOptions{
+					Name: "Next Action",
+				},
+			},
+			"Context": notion.DatabasePageProperty{
+				Select: &notion.SelectOptions{
+					Name: "💻.  Computer",
+				},
+			},
+			"Processed": notion.DatabasePageProperty{
+				Checkbox: &isChecked,
+			},
+			"Project": notion.DatabasePageProperty{
+				Relation: []notion.Relation{
+					{
+						ID: projectId,
+					},
+				},
+			},
+			"Content Item": notion.DatabasePageProperty{
+				Relation: []notion.Relation{
+					{
+						ID: contentItemId,
+					},
+				},
+			},
+		},
+	}
 
-		if subtasks != nil {
-			params.Children = []notion.Block{}
-			for _, el := range subtasks {
-				params.Children = append(params.Children, notion.Block{
-					ToDo: &notion.ToDo{
-						RichTextBlock: notion.RichTextBlock{
-							Text: []notion.RichText{
-								{
-									Text: &notion.Text{
-										Content: el,
-									},
+	if subtasks != nil {
+		params.Children = []notion.Block{}
+		for _, el := range subtasks {
+			params.Children = append(params.Children, notion.Block{
+				ToDo: &notion.ToDo{
+					RichTextBlock: notion.RichTextBlock{
+						Text: []notion.RichText{
+							{
+								Text: &notion.Text{
+									Content: el,
 								},
 							},
 						},
 					},
-				})
-			}
-		}
-		_, err := client.CreatePage(context.TODO(), params)
-		if err != nil {
-			log.Fatal(err)
+				},
+			})
 		}
 	}
+	_, err := client.CreatePage(context.TODO(), params)
+	if err != nil {
+		log.Fatal(err)
+	}
 
-	// if folderPath != nil {
+	return client.CreatePage(context.TODO(), params)
+
 	// 	// Get current iterator by area
 	// 	dbid = utils.GetConfigString("NOTION_ITERATOR_DB", true)
 	// 	results, err := client.QueryDatabase(context.Background(), dbid, &notion.DatabaseQuery{

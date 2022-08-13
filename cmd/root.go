@@ -40,6 +40,7 @@ func init() {
 	rootCmd.AddCommand(config.ConfigCmd)
 	rootCmd.AddCommand(ps.PsCmd)
 	rootCmd.AddCommand(bm.BmCommand)
+	rootCmd.AddCommand(IdCommand)
 }
 
 func initConfig() {
