@@ -131,7 +131,7 @@ func SetupContentProject(contentItemId string) {
 	areaName := areaProps["Name"].Title[0].PlainText
 
 	// Update page with icon & draft status
-	_, err = updateContentItemPage(contentItemId)
+	_, err = updateContentItemPage(contentItemId, areaName)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -150,7 +150,15 @@ func SetupContentProject(contentItemId string) {
 	}
 }
 
-func updateContentItemPage(contentItemId string) (notion.Page, error) {
+func updateContentItemPage(contentItemId string, areaName string) (notion.Page, error) {
+	var iconUrl string
+	cloudBaseUrl := utils.GetConfigString("CLOUD_BASE_URL", true)
+	if areaName == "PlanetScale" {
+		iconUrl = fmt.Sprintf("%v/img/pscale.png", cloudBaseUrl)
+	}
+	if areaName == "Creator" {
+		iconUrl = fmt.Sprintf("%v/img/creator.png", cloudBaseUrl)
+	}
 	updParams := notion.UpdatePageParams{
 		// TODO: Grab the icon from the Area and apply it here
 		// Icon: &notion.Icon{
@@ -163,6 +171,13 @@ func updateContentItemPage(contentItemId string) (notion.Page, error) {
 				},
 			},
 		},
+	}
+	if iconUrl != "" {
+		updParams.Icon = &notion.Icon{
+			External: &notion.FileExternal{
+				URL: iconUrl,
+			},
+		}
 	}
 	return client.UpdatePage(context.TODO(), contentItemId, updParams)
 }

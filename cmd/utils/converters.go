@@ -258,6 +258,7 @@ func NotionExportToMarkdown(zipPath string, postContent *string, noCleanupFlag b
 			}
 		}
 
+		// Append postContent if any
 		if postContent != nil {
 			content += *postContent
 		}
