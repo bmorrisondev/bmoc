@@ -41,6 +41,7 @@ func (c *WordPressClient) CreatePost(request WPPagePostRequest) (*WPPagePostResp
 	hc := http.Client{}
 	req, _ := http.NewRequest("POST", url, body)
 	req.Header.Add("Authorization", fmt.Sprintf("Basic %v", c.GetToken()))
+	req.Header.Add("Content-Type", "application/json")
 	res, err := hc.Do(req)
 	if err != nil {
 		return nil, err

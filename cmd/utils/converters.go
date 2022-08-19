@@ -15,7 +15,10 @@ import (
 	slugify "github.com/gosimple/slug"
 )
 
-func NotionExportToMarkdown(zipPath string, postContent *string, noCleanupFlag bool) {
+func NotionExportToMarkdown(zipPath string, postContent *string, imgPathPrefix string, noCleanupFlag bool) {
+	if imgPathPrefix == "" {
+		imgPathPrefix = "."
+	}
 	outpath := ""
 	imgoutpath := ""
 	path, err := UnzipSource(zipPath)
@@ -202,7 +205,7 @@ func NotionExportToMarkdown(zipPath string, postContent *string, noCleanupFlag b
 					}
 				}
 
-				content += fmt.Sprintf("![%v](/docs/img/docs/%v/%v.%v)", imgAlt, slug, imgSlug, imgExt)
+				content += fmt.Sprintf("![%v](%v/%v/%v.%v)", imgAlt, imgPathPrefix, slug, imgSlug, imgExt)
 				skipLine = imgAlt
 				continue
 			}

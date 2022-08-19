@@ -22,7 +22,8 @@ var FormatCmd = &cobra.Command{
 			return
 		}
 		postContent := "<GetHelp />\n"
-		utils.NotionExportToMarkdown(formatDocFlag, &postContent, noCleanupFlag)
+		imgPathPrefix := "/docs/img/docs"
+		utils.NotionExportToMarkdown(formatDocFlag, &postContent, imgPathPrefix, noCleanupFlag)
 	},
 }
 

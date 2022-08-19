@@ -5,7 +5,10 @@ import (
 )
 
 var ContentCommand = &cobra.Command{
-	Use:   "content",
+	Use: "content",
+	Aliases: []string{
+		"c",
+	},
 	Short: "Automate all the contents!",
 	Run: func(cmd *cobra.Command, args []string) {
 

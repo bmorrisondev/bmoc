@@ -4,6 +4,7 @@ import (
 	"bmoc/cmd/models"
 	"bmoc/cmd/utils"
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"strings"
@@ -157,7 +158,7 @@ func updateContentItemPage(contentItemId string, areaName string) (notion.Page, 
 	var iconUrl string
 	cloudBaseUrl := utils.GetConfigString("CLOUD_BASE_URL", true)
 	if areaName == "PlanetScale" {
-		iconUrl = fmt.Sprintf("%v/img/pscale.png", cloudBaseUrl)
+		iconUrl = fmt.Sprintf("%v/img/pscale.jpeg", cloudBaseUrl)
 	}
 	if areaName == "Creator" {
 		iconUrl = fmt.Sprintf("%v/img/creator.png", cloudBaseUrl)
@@ -177,6 +178,7 @@ func updateContentItemPage(contentItemId string, areaName string) (notion.Page, 
 	}
 	if iconUrl != "" {
 		updParams.Icon = &notion.Icon{
+			Type: notion.IconTypeExternal,
 			External: &notion.FileExternal{
 				URL: iconUrl,
 			},
@@ -328,14 +330,20 @@ func NotionToWordPressPage(pageId string) models.WordPressPageDTO {
 	}
 
 	// Get the page from Notion
-
 	page, err := client.FindPageByID(context.TODO(), pageId)
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	// Parse stuff from props
 	props := page.Properties.(notion.DatabasePageProperties)
+	if len(props["Name"].Title) > 0 {
+		dto.Title = props["Name"].Title[0].PlainText
+	}
 	if len(props["Excerpt"].RichText) > 0 {
 		dto.Excerpt = props["Excerpt"].RichText[0].PlainText
+	} else {
+		log.Fatal("Excerpt is empty")
 	}
 
 	blocks, err := client.FindBlockChildrenByID(context.TODO(), pageId, nil)
@@ -343,15 +351,32 @@ func NotionToWordPressPage(pageId string) models.WordPressPageDTO {
 		log.Fatal(err)
 	}
 
+	isBuildingList := false
 	// Iterate over each block and create html
 	for _, el := range blocks.Results {
+		if el.Type == notion.BlockTypeBulletedListItem {
+			if !isBuildingList {
+				dto.HTML += "<ul>"
+				isBuildingList = true
+			}
+			dto.HTML += "<li>"
+			dto.HTML += el.BulletedListItem.Text[0].PlainText
+			dto.HTML += "</li>"
+			continue
+		}
+
+		if isBuildingList {
+			dto.HTML += "</ul>"
+			isBuildingList = false
+		}
+
 		if el.Type == notion.BlockTypeHeading1 {
-			dto.HTML += fmt.Sprintf("<h1>%v</h1>\n", el.Heading1.Text[0].PlainText)
+			dto.HTML += fmt.Sprintf("<h1>%v</h1>", el.Heading1.Text[0].PlainText)
 			continue
 		}
 
 		if el.Type == notion.BlockTypeHeading2 {
-			dto.HTML += fmt.Sprintf("<h2>%v</h2>\n", el.Heading2.Text[0].PlainText)
+			dto.HTML += fmt.Sprintf("<h2>%v</h2>", el.Heading2.Text[0].PlainText)
 			continue
 		}
 
@@ -389,8 +414,17 @@ func NotionToWordPressPage(pageId string) models.WordPressPageDTO {
 
 				dto.HTML += ptext.PlainText
 			}
-			dto.HTML += "</p>\n"
+			dto.HTML += "</p>"
+			continue
 		}
+
+		if el.Type == notion.BlockTypeCode {
+			jbytes, _ := json.Marshal(el)
+			log.Println(string(jbytes))
+			continue
+		}
+
+		log.Println("unprocessed: ", el.Type)
 	}
 
 	return dto
