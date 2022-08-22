@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/dstotijn/go-notion"
+	"github.com/gosimple/slug"
 	"github.com/spf13/cobra"
 )
 
@@ -60,22 +61,23 @@ func migrateCommandCallback(pageId string) {
 		replaceWith := fmt.Sprintf(`<figure class="wp-block-image size-full"><img loading="lazy" src="%v" alt="%v"><figcaption>%v</figcaption></figure>`, *uplurl, el.Name, el.Name)
 		dto.HTML = strings.Replace(dto.HTML, el.Tag, replaceWith, 1)
 	}
-	log.Println(dto.HTML)
+	// log.Println(dto.HTML)
 
 	// Send post to WordPress
-	// req := services.WPPagePostRequest{
-	// 	Date:     "2022-08-13T00:00:00",
-	// 	Slug:     slug.Make(dto.Title),
-	// 	Status:   "publish",
-	// 	Title:    dto.Title,
-	// 	Content:  dto.HTML,
-	// 	AuthorId: 2,
-	// 	Excerpt:  dto.Excerpt,
-	// }
-	// _, err := wpclient.CreatePost(req)
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
+	req := services.WPPagePostRequest{
+		Date:     "2022-08-22T00:00:00",
+		Slug:     slug.Make(dto.Title),
+		Status:   "publish",
+		Title:    dto.Title,
+		Content:  dto.HTML,
+		AuthorId: 2,
+		Excerpt:  dto.Excerpt,
+	}
+	_, err := wpclient.CreatePost(req)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	// TODO: better message here, maybe open it in wp right away
 	log.Println("Done!")
 }

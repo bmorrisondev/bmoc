@@ -417,11 +417,23 @@ func NotionToWordPressPage(pageId string) models.WordPressPageDTO {
 			continue
 		}
 
-		// if el.Type == notion.BlockTypeCode {
-		// 	jbytes, _ := json.Marshal(el)
-		// 	log.Println(string(jbytes))
-		// 	continue
-		// }
+		if el.Type == notion.BlockTypeCode {
+			dto.HTML += fmt.Sprintf("<pre class=\"wp-block-code language-%v\"><code>", *el.Code.Language)
+			codestr := ""
+			for _, el := range el.Code.Text {
+				codestr += el.PlainText
+			}
+			// var b bytes.Buffer
+			// w := bufio.NewWriter(&b)
+			// err = quick.Highlight(w, codestr, "go", "html", "monokai")
+			// if err != nil {
+			// 	log.Fatal(err)
+			// }
+			// dto.HTML += string(b.Bytes())
+			dto.HTML += codestr
+			dto.HTML += "</code></pre>"
+			continue
+		}
 
 		// log.Println("unprocessed: ", el.Type)
 	}
