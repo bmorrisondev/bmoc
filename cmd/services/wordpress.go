@@ -82,7 +82,6 @@ func (c *WordPressClient) UploadMediaFromUrl(url string, alt string, caption str
 	if err != nil {
 		return nil, err
 	}
-	defer file.Close()
 
 	// Create the POST body
 	body := &bytes.Buffer{}
@@ -138,6 +137,7 @@ func (c *WordPressClient) UploadMediaFromUrl(url string, alt string, caption str
 		return nil, err
 	}
 
+	file.Close()
 	err = os.Remove(newname)
 	if err != nil {
 		return nil, err

@@ -48,8 +48,10 @@ func migrateCommandCallback(pageId string) {
 	wpclient := container.GetWordPressClient()
 	for _, el := range dto.ImagesToUpload {
 		if el.Slug == "" {
-			continue
+			log.Fatal("One or more images do not have captions.")
 		}
+	}
+	for _, el := range dto.ImagesToUpload {
 		// TODO: Need to get the id of the returned image so I can link them in the post
 		uplurl, err := wpclient.UploadMediaFromUrl(el.OriginalUrl, el.Name, el.Name)
 		if err != nil {
@@ -58,7 +60,7 @@ func migrateCommandCallback(pageId string) {
 		replaceWith := fmt.Sprintf(`<figure class="wp-block-image size-full"><img loading="lazy" src="%v" alt="%v"><figcaption>%v</figcaption></figure>`, *uplurl, el.Name, el.Name)
 		dto.HTML = strings.Replace(dto.HTML, el.Tag, replaceWith, 1)
 	}
-	// log.Println(dto.HTML)
+	log.Println(dto.HTML)
 
 	// Send post to WordPress
 	// req := services.WPPagePostRequest{

@@ -10,7 +10,6 @@ var BmCommand = &cobra.Command{
 	Use:   "bm",
 	Short: "Commands around personal content & automation",
 	Run: func(cmd *cobra.Command, args []string) {
-
 	},
 }
 

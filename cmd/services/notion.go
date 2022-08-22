@@ -4,7 +4,6 @@ import (
 	"bmoc/cmd/models"
 	"bmoc/cmd/utils"
 	"context"
-	"encoding/json"
 	"fmt"
 	"log"
 	"strings"
@@ -418,13 +417,13 @@ func NotionToWordPressPage(pageId string) models.WordPressPageDTO {
 			continue
 		}
 
-		if el.Type == notion.BlockTypeCode {
-			jbytes, _ := json.Marshal(el)
-			log.Println(string(jbytes))
-			continue
-		}
+		// if el.Type == notion.BlockTypeCode {
+		// 	jbytes, _ := json.Marshal(el)
+		// 	log.Println(string(jbytes))
+		// 	continue
+		// }
 
-		log.Println("unprocessed: ", el.Type)
+		// log.Println("unprocessed: ", el.Type)
 	}
 
 	return dto
