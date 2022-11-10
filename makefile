@@ -5,5 +5,5 @@ build:
 tidy:
 	go mod tidy -compat=1.17
 
-install:
-	go install .
+install: build
+	cp ./dist/bmoc ~/bin

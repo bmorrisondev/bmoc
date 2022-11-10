@@ -20,8 +20,8 @@ var FormatCommand = &cobra.Command{
 			log.Println("Missing parameter, 'in (i)' is required")
 			return
 		}
-		imgPathPrefix := ""
-		utils.NotionExportToMarkdown(formatDocFlag, nil, imgPathPrefix, noCleanupFlag)
+		imgPathPrefix := "/images/blog/content"
+		utils.NotionExportToMarkdown(formatDocFlag, nil, imgPathPrefix, noCleanupFlag, false)
 	},
 }
 
