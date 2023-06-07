@@ -5,7 +5,7 @@ go 1.17
 require (
 	github.com/bmorrisondev/go-utils v1.0.1
 	github.com/charmbracelet/bubbletea v0.22.0
-	github.com/dstotijn/go-notion v0.6.1
+	github.com/dstotijn/go-notion v0.11.0
 	github.com/forPelevin/gomoji v1.1.4
 	github.com/gosimple/slug v1.12.0
 	github.com/pkg/errors v0.9.1

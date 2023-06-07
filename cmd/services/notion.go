@@ -1,15 +1,12 @@
 package services
 
 import (
-	"bmoc/cmd/models"
 	"bmoc/cmd/utils"
 	"context"
 	"fmt"
 	"log"
-	"strings"
 
 	"github.com/dstotijn/go-notion"
-	"github.com/gosimple/slug"
 	"github.com/pkg/errors"
 	"github.com/spf13/viper"
 )
@@ -26,18 +23,18 @@ func setup() {
 	client = notion.NewClient(notionKey)
 }
 
-func GetHeaderBlockText(blockUrl string) *string {
-	setup()
-	spl := strings.Split(blockUrl, "-")
-	blockId := spl[len(spl)-1]
-	bl, err := client.FindBlockByID(context.TODO(), blockId)
-	if err != nil {
-		log.Println(fmt.Sprintf("WARN: Unable to parse title of block: %v // url: %v", blockId, blockUrl))
-		return nil
-	}
+// func GetHeaderBlockText(blockUrl string) *string {
+// 	setup()
+// 	spl := strings.Split(blockUrl, "-")
+// 	blockId := spl[len(spl)-1]
+// 	bl, err := client.FindBlockByID(context.TODO(), blockId)
+// 	if err != nil {
+// 		log.Println(fmt.Sprintf("WARN: Unable to parse title of block: %v // url: %v", blockId, blockUrl))
+// 		return nil
+// 	}
 
-	return &bl.ChildPage.Title
-}
+// 	return &bl.ChildPage.Title
+// }
 
 func ListDraftArticles() ([]notion.Page, error) {
 	setup()
@@ -49,8 +46,10 @@ func ListDraftArticles() ([]notion.Page, error) {
 	filter := notion.DatabaseQuery{
 		Filter: &notion.DatabaseQueryFilter{
 			Property: "Status",
-			Select: &notion.SelectDatabaseQueryFilter{
-				Equals: "Draft In Progress",
+			DatabaseQueryPropertyFilter: notion.DatabaseQueryPropertyFilter{
+				Select: &notion.SelectDatabaseQueryFilter{
+					Equals: "Draft In Progress",
+				},
 			},
 		},
 	}
@@ -63,7 +62,7 @@ func ListDraftArticles() ([]notion.Page, error) {
 	return res.Results, nil
 }
 
-func ListContentItems(status *string, area *string) ([]notion.Page, error) {
+func ListContentItems(status, area, contentType *string) ([]notion.Page, error) {
 	setup()
 	dbid := viper.GetString("NOTION_CONTENT_DB")
 	if dbid == "" {
@@ -80,8 +79,10 @@ func ListContentItems(status *string, area *string) ([]notion.Page, error) {
 		filter.Filter.And = append(filter.Filter.And,
 			notion.DatabaseQueryFilter{
 				Property: "Status",
-				Select: &notion.SelectDatabaseQueryFilter{
-					Equals: *status,
+				DatabaseQueryPropertyFilter: notion.DatabaseQueryPropertyFilter{
+					Status: &notion.StatusDatabaseQueryFilter{
+						Equals: *status,
+					},
 				},
 			},
 		)
@@ -91,8 +92,23 @@ func ListContentItems(status *string, area *string) ([]notion.Page, error) {
 		filter.Filter.And = append(filter.Filter.And,
 			notion.DatabaseQueryFilter{
 				Property: "Area",
-				Relation: &notion.RelationDatabaseQueryFilter{
-					Contains: *area,
+				DatabaseQueryPropertyFilter: notion.DatabaseQueryPropertyFilter{
+					Relation: &notion.RelationDatabaseQueryFilter{
+						Contains: *area,
+					},
+				},
+			},
+		)
+	}
+
+	if contentType != nil {
+		filter.Filter.And = append(filter.Filter.And,
+			notion.DatabaseQueryFilter{
+				Property: "Type",
+				DatabaseQueryPropertyFilter: notion.DatabaseQueryPropertyFilter{
+					Select: &notion.SelectDatabaseQueryFilter{
+						Equals: *contentType,
+					},
 				},
 			},
 		)
@@ -104,6 +120,18 @@ func ListContentItems(status *string, area *string) ([]notion.Page, error) {
 	}
 
 	return res.Results, nil
+}
+
+func GetMarkdownFromPage(id string) (*string, error) {
+	setup()
+
+	page, err := client.FindPageByID(context.Background(), id)
+	if err != nil {
+		return nil, err
+	}
+	props := page.Properties.(notion.DatabasePageProperties)
+	log.Println(props["Excerpt"])
+	return nil, nil
 }
 
 func SetupContentProject(contentItemId string) {
@@ -144,13 +172,13 @@ func SetupContentProject(contentItemId string) {
 	log.Println("Created project:", projectPage.ID)
 
 	// Create tasks
-	projectTasks := models.BuildProjectTaskList(areaName, types)
-	for task, subtasks := range projectTasks {
-		_, err = createContentItemTask(projectPage.ID, contentItemId, task, subtasks)
-		if err != nil {
-			log.Fatal(err)
-		}
-	}
+	// projectTasks := models.BuildProjectTaskList(areaName, types)
+	// for task, subtasks := range projectTasks {
+	// 	_, err = createContentItemTask(projectPage.ID, contentItemId, task, subtasks)
+	// 	if err != nil {
+	// 		log.Fatal(err)
+	// 	}
+	// }
 }
 
 func updateContentItemPage(contentItemId string, areaName string) (notion.Page, error) {
@@ -224,219 +252,100 @@ func createContentProject(projectName, contentItemId string) (notion.Page, error
 	return client.CreatePage(context.TODO(), params)
 }
 
-func createContentItemTask(projectId string, contentItemId string, task string, subtasks []string) (notion.Page, error) {
-	dbid := utils.GetConfigString("NOTION_TASKS_DB", true)
-	isChecked := true
-	params := notion.CreatePageParams{
-		ParentType: notion.ParentTypeDatabase,
-		ParentID:   dbid,
-		DatabasePageProperties: &notion.DatabasePageProperties{
-			"Name": notion.DatabasePageProperty{
-				Title: []notion.RichText{
-					{
-						Text: &notion.Text{
-							Content: task,
-						},
-					},
-				},
-			},
-			"Sprint Status": notion.DatabasePageProperty{
-				Select: &notion.SelectOptions{
-					Name: "To Do",
-				},
-			},
-			"Status": notion.DatabasePageProperty{
-				Select: &notion.SelectOptions{
-					Name: "Next Action",
-				},
-			},
-			"Context": notion.DatabasePageProperty{
-				Select: &notion.SelectOptions{
-					Name: "💻.  Computer",
-				},
-			},
-			"Processed": notion.DatabasePageProperty{
-				Checkbox: &isChecked,
-			},
-			"Project": notion.DatabasePageProperty{
-				Relation: []notion.Relation{
-					{
-						ID: projectId,
-					},
-				},
-			},
-			"Content Item": notion.DatabasePageProperty{
-				Relation: []notion.Relation{
-					{
-						ID: contentItemId,
-					},
-				},
-			},
-		},
-	}
+// func createContentItemTask(projectId string, contentItemId string, task string, subtasks []string) (notion.Page, error) {
+// 	dbid := utils.GetConfigString("NOTION_TASKS_DB", true)
+// 	isChecked := true
+// 	params := notion.CreatePageParams{
+// 		ParentType: notion.ParentTypeDatabase,
+// 		ParentID:   dbid,
+// 		DatabasePageProperties: &notion.DatabasePageProperties{
+// 			"Name": notion.DatabasePageProperty{
+// 				Title: []notion.RichText{
+// 					{
+// 						Text: &notion.Text{
+// 							Content: task,
+// 						},
+// 					},
+// 				},
+// 			},
+// 			"Sprint Status": notion.DatabasePageProperty{
+// 				Select: &notion.SelectOptions{
+// 					Name: "To Do",
+// 				},
+// 			},
+// 			"Status": notion.DatabasePageProperty{
+// 				Select: &notion.SelectOptions{
+// 					Name: "Next Action",
+// 				},
+// 			},
+// 			"Context": notion.DatabasePageProperty{
+// 				Select: &notion.SelectOptions{
+// 					Name: "💻.  Computer",
+// 				},
+// 			},
+// 			"Processed": notion.DatabasePageProperty{
+// 				Checkbox: &isChecked,
+// 			},
+// 			"Project": notion.DatabasePageProperty{
+// 				Relation: []notion.Relation{
+// 					{
+// 						ID: projectId,
+// 					},
+// 				},
+// 			},
+// 			"Content Item": notion.DatabasePageProperty{
+// 				Relation: []notion.Relation{
+// 					{
+// 						ID: contentItemId,
+// 					},
+// 				},
+// 			},
+// 		},
+// 	}
 
-	if subtasks != nil {
-		params.Children = []notion.Block{}
-		for _, el := range subtasks {
-			params.Children = append(params.Children, notion.Block{
-				ToDo: &notion.ToDo{
-					RichTextBlock: notion.RichTextBlock{
-						Text: []notion.RichText{
-							{
-								Text: &notion.Text{
-									Content: el,
-								},
-							},
-						},
-					},
-				},
-			})
-		}
-	}
-	_, err := client.CreatePage(context.TODO(), params)
-	if err != nil {
-		log.Fatal(err)
-	}
+// 	if subtasks != nil {
+// 		params.Children = []notion.Block{}
+// 		for _, el := range subtasks {
+// 			params.Children = append(params.Children, notion.Block{
+// 				ToDo: &notion.ToDo{
+// 					RichTextBlock: notion.RichTextBlock{
+// 						Text: []notion.RichText{
+// 							{
+// 								Text: &notion.Text{
+// 									Content: el,
+// 								},
+// 							},
+// 						},
+// 					},
+// 				},
+// 			})
+// 		}
+// 	}
+// 	_, err := client.CreatePage(context.TODO(), params)
+// 	if err != nil {
+// 		log.Fatal(err)
+// 	}
 
-	return client.CreatePage(context.TODO(), params)
+// 	return client.CreatePage(context.TODO(), params)
 
-	// 	// Get current iterator by area
-	// 	dbid = utils.GetConfigString("NOTION_ITERATOR_DB", true)
-	// 	results, err := client.QueryDatabase(context.Background(), dbid, &notion.DatabaseQuery{
-	// 		Filter: &notion.DatabaseQueryFilter{
-	// 			Property: "Area",
-	// 			Relation: &notion.RelationDatabaseQueryFilter{
-	// 				Contains: areaId,
-	// 			},
-	// 		},
-	// 	})
-	// 	if err != nil {
-	// 		log.Fatal(err)
-	// 	}
-	// 	if len(results.Results) >= 1 {
+// 	// 	// Get current iterator by area
+// 	// 	dbid = utils.GetConfigString("NOTION_ITERATOR_DB", true)
+// 	// 	results, err := client.QueryDatabase(context.Background(), dbid, &notion.DatabaseQuery{
+// 	// 		Filter: &notion.DatabaseQueryFilter{
+// 	// 			Property: "Area",
+// 	// 			Relation: &notion.RelationDatabaseQueryFilter{
+// 	// 				Contains: areaId,
+// 	// 			},
+// 	// 		},
+// 	// 	})
+// 	// 	if err != nil {
+// 	// 		log.Fatal(err)
+// 	// 	}
+// 	// 	if len(results.Results) >= 1 {
 
-	// 	}
-	// 	iterationProps := iteration.Properties.(notion.DatabasePageProperties)
-	// 	// Copy content template folder
+// 	// 	}
+// 	// 	iterationProps := iteration.Properties.(notion.DatabasePageProperties)
+// 	// 	// Copy content template folder
 
-	// }
-}
-
-func NotionToWordPressPage(pageId string) models.WordPressPageDTO {
-	setup()
-	dto := models.WordPressPageDTO{
-		ImagesToUpload: []models.WordPressMediaDTO{},
-	}
-
-	// Get the page from Notion
-	page, err := client.FindPageByID(context.TODO(), pageId)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// Parse stuff from props
-	props := page.Properties.(notion.DatabasePageProperties)
-	if len(props["Name"].Title) > 0 {
-		dto.Title = props["Name"].Title[0].PlainText
-	}
-	if len(props["Excerpt"].RichText) > 0 {
-		dto.Excerpt = props["Excerpt"].RichText[0].PlainText
-	} else {
-		log.Fatal("Excerpt is empty")
-	}
-
-	blocks, err := client.FindBlockChildrenByID(context.TODO(), pageId, nil)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	isBuildingList := false
-	// Iterate over each block and create html
-	for _, el := range blocks.Results {
-		if el.Type == notion.BlockTypeBulletedListItem {
-			if !isBuildingList {
-				dto.HTML += "<ul>"
-				isBuildingList = true
-			}
-			dto.HTML += "<li>"
-			dto.HTML += el.BulletedListItem.Text[0].PlainText
-			dto.HTML += "</li>"
-			continue
-		}
-
-		if isBuildingList {
-			dto.HTML += "</ul>"
-			isBuildingList = false
-		}
-
-		if el.Type == notion.BlockTypeHeading1 {
-			dto.HTML += fmt.Sprintf("<h1>%v</h1>", el.Heading1.Text[0].PlainText)
-			continue
-		}
-
-		if el.Type == notion.BlockTypeHeading2 {
-			dto.HTML += fmt.Sprintf("<h2>%v</h2>", el.Heading2.Text[0].PlainText)
-			continue
-		}
-
-		if el.Type == notion.BlockTypeImage {
-			imgdto := models.WordPressMediaDTO{
-				OriginalUrl: el.Image.File.URL,
-			}
-			if len(el.Image.Caption) > 0 {
-				imgdto.Name = el.Image.Caption[0].PlainText
-				imgdto.Slug = slug.Make(imgdto.Name)
-			}
-			imgdto.Tag = fmt.Sprintf("{{%v}}", imgdto.Slug)
-			dto.HTML += imgdto.Tag + "\n"
-			dto.ImagesToUpload = append(dto.ImagesToUpload, imgdto)
-			continue
-		}
-
-		if el.Type == notion.BlockTypeParagraph && len(el.Paragraph.Text) > 0 {
-			dto.HTML += "<p>"
-			for _, ptext := range el.Paragraph.Text {
-				if ptext.Annotations.Bold {
-					dto.HTML += fmt.Sprintf("<b>%v</b>", ptext.PlainText)
-					continue
-				}
-
-				if ptext.Annotations.Italic {
-					dto.HTML += fmt.Sprintf("<i>%v</i>", ptext.PlainText)
-					continue
-				}
-
-				if ptext.Annotations.Code {
-					// TODO: figure this one out
-					continue
-				}
-
-				dto.HTML += ptext.PlainText
-			}
-			dto.HTML += "</p>"
-			continue
-		}
-
-		if el.Type == notion.BlockTypeCode {
-			dto.HTML += fmt.Sprintf("<pre class=\"wp-block-code language-%v\"><code>", *el.Code.Language)
-			codestr := ""
-			for _, el := range el.Code.Text {
-				codestr += el.PlainText
-			}
-			// var b bytes.Buffer
-			// w := bufio.NewWriter(&b)
-			// err = quick.Highlight(w, codestr, "go", "html", "monokai")
-			// if err != nil {
-			// 	log.Fatal(err)
-			// }
-			// dto.HTML += string(b.Bytes())
-			dto.HTML += codestr
-			dto.HTML += "</code></pre>"
-			continue
-		}
-
-		// log.Println("unprocessed: ", el.Type)
-	}
-
-	return dto
-}
+// 	// }
+// }

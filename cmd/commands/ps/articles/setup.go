@@ -19,7 +19,7 @@ var SetupCommand = &cobra.Command{
 
 		area := utils.GetConfigString("NOTION_AREA_PLANETSCALE", true)
 		status := "Selected"
-		pages, err := services.ListContentItems(&status, &area)
+		pages, err := services.ListContentItems(&status, &area, nil)
 		if err != nil {
 			log.Fatal(err)
 		}

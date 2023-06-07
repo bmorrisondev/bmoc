@@ -16,6 +16,5 @@ var ContentCommand = &cobra.Command{
 }
 
 func init() {
-	ContentCommand.AddCommand(MigrateCommand)
 	ContentCommand.AddCommand(SetupCommand)
 }

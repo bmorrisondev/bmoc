@@ -43,14 +43,14 @@ func run(cmd *cobra.Command, args []string) {
 	// Get content items to present
 	area := utils.GetConfigString("NOTION_AREA_PLANETSCALE", true)
 	status := "Selected"
-	pages, err := services.ListContentItems(&status, &area)
+	pages, err := services.ListContentItems(&status, &area, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	opts := utils.Options{
 		Choices:  []utils.Choice{},
-		Callback: callback,
+		Callback: setupCmdCallback,
 	}
 
 	for _, el := range pages {
@@ -63,6 +63,6 @@ func run(cmd *cobra.Command, args []string) {
 	utils.PresentSelector(opts)
 }
 
-func callback(contentItemId string) {
+func setupCmdCallback(contentItemId string) {
 	services.SetupContentProject(contentItemId)
 }

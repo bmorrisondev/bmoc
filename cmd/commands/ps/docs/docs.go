@@ -13,4 +13,5 @@ var DocsCommand = &cobra.Command{
 func init() {
 	DocsCommand.AddCommand(FormatCmd)
 	DocsCommand.AddCommand(SetupDocCmd)
+	DocsCommand.AddCommand(ExportCommand)
 }
