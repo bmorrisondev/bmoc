@@ -15,7 +15,7 @@ import (
 	slugify "github.com/gosimple/slug"
 )
 
-func NotionExportToMarkdown(zipPath string, postContent *string, imgPathPrefix string, noCleanupFlag bool, usePsImageConvention bool) {
+func NotionExportToMarkdown(zipPath string, postContent *string, imgPathPrefix string, noCleanupFlag bool) {
 	if imgPathPrefix == "" {
 		imgPathPrefix = "."
 	}
@@ -51,9 +51,6 @@ func NotionExportToMarkdown(zipPath string, postContent *string, imgPathPrefix s
 		infoBlockTypeWasCaptured := false
 		isInCodeBlock := false
 		isBuildingList := false
-		// needsExtraLine := false
-		imageDepLines := ""
-		imageCounter := 0
 
 		for scanner.Scan() {
 			line := scanner.Text()
@@ -207,13 +204,7 @@ func NotionExportToMarkdown(zipPath string, postContent *string, imgPathPrefix s
 					}
 				}
 
-				if usePsImageConvention {
-					imageDepLines += fmt.Sprintf("import img%v from '@images/%v--%v.%v'\n", imageCounter, slug, imgSlug, imgExt)
-					content += fmt.Sprintf("<ImageBlock alt='%v' src={img%v} />", imgAlt, imageCounter)
-					imageCounter++
-				} else {
-					content += fmt.Sprintf("![%v](%v/%v/%v.%v)", imgAlt, imgPathPrefix, slug, imgSlug, imgExt)
-				}
+				content += fmt.Sprintf("![%v](%v/%v/%v.%v)", imgAlt, imgPathPrefix, slug, imgSlug, imgExt)
 				skipLine = imgAlt
 				continue
 			}
@@ -276,9 +267,6 @@ func NotionExportToMarkdown(zipPath string, postContent *string, imgPathPrefix s
 
 		// Write the content out
 		outcontent := fmt.Sprintf("---\ntitle: %v\nsubtitle: %v\n---\n\n", title, subtitle)
-		if usePsImageConvention {
-			outcontent += fmt.Sprintf("%v\n\n", imageDepLines)
-		}
 		outcontent += content
 		outfile := fmt.Sprintf("%v/index.mdx", outpath)
 		err = os.WriteFile(outfile, []byte(outcontent), 0644)

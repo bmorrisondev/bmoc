@@ -21,9 +21,8 @@ var FormatCmd = &cobra.Command{
 			log.Println("Missing parameter, 'in (i)' is required")
 			return
 		}
-		postContent := "<GetHelp />\n"
-		imgPathPrefix := "/docs/img/docs"
-		utils.NotionExportToMarkdown(formatDocFlag, &postContent, imgPathPrefix, noCleanupFlag, true)
+		imgPathPrefix := "/assets/docs"
+		utils.NotionExportToMarkdown(formatDocFlag, nil, imgPathPrefix, noCleanupFlag)
 	},
 }
 

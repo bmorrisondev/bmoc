@@ -21,7 +21,7 @@ var FormatCommand = &cobra.Command{
 			return
 		}
 		imgPathPrefix := "/images/blog/content"
-		utils.NotionExportToMarkdown(formatDocFlag, nil, imgPathPrefix, noCleanupFlag, false)
+		utils.NotionExportToMarkdown(formatDocFlag, nil, imgPathPrefix, noCleanupFlag)
 	},
 }
 
