@@ -35,11 +35,13 @@ func init() {
 	YtCmd.Flags().StringP("video", "v", "", "Path to the video file (required)")
 	YtCmd.Flags().StringP("ollama", "o", "http://10.30.0.133:11434", "Ollama API endpoint URL")
 	YtCmd.Flags().StringP("generate-model", "g", "llama3", "Ollama model for generation")
+	YtCmd.Flags().BoolP("verbose", "V", false, "Enable verbose output")
 
 	// Bind flags to Viper (for reading from config/env)
 	viper.BindPFlag("yt.video", YtCmd.Flags().Lookup("video"))
 	viper.BindPFlag("yt.ollama", YtCmd.Flags().Lookup("ollama"))
 	viper.BindPFlag("yt.generate-model", YtCmd.Flags().Lookup("generate-model"))
+	viper.BindPFlag("yt.verbose", YtCmd.Flags().Lookup("verbose"))
 
 	// Mark required flags (only video is left as a flag)
 	YtCmd.MarkFlagRequired("video")
@@ -49,6 +51,7 @@ func init() {
 func runYtCommand(cmd *cobra.Command, args []string) {
 	// Get flag values directly or via Viper (if bound)
 	videoPath := viper.GetString("yt.video") // Get potentially overridden value
+	verbose := viper.GetBool("yt.verbose")   // Get verbose flag value
 
 	// Resolve to absolute path to handle relative paths correctly
 	absoluteVideoPath, err := filepath.Abs(videoPath)
@@ -66,37 +69,43 @@ func runYtCommand(cmd *cobra.Command, args []string) {
 	ollamaEndpoint := viper.GetString("yt.ollama")
 	generateModel := viper.GetString("yt.generate-model")
 
-	fmt.Printf("Processing video: %s\n", absoluteVideoPath)
-	fmt.Printf("Using OpenAI for Transcription\n")
-	fmt.Printf("Using Ollama endpoint for Generation: %s\n", ollamaEndpoint)
-	fmt.Printf("Generation Model: %s\n", generateModel)
+	if verbose {
+		fmt.Printf("Processing video: %s\n", absoluteVideoPath)
+		fmt.Printf("Using OpenAI for Transcription\n")
+		fmt.Printf("Using Ollama endpoint for Generation: %s\n", ollamaEndpoint)
+		fmt.Printf("Generation Model: %s\n", generateModel)
+	}
 
 	// 1. Extract audio from video
-	audioPath, err := extractAudio(absoluteVideoPath)
+	audioPath, err := extractAudio(absoluteVideoPath, verbose) // Pass verbose flag
 	if err != nil {
 		log.Fatalf("Error extracting audio: %v", err)
 	}
 	defer func() {
-		fmt.Printf("Cleaning up temporary audio file: %s\n", audioPath)
+		if verbose {
+			fmt.Printf("Cleaning up temporary audio file: %s\n", audioPath)
+		}
 		os.Remove(audioPath)
 	}()
 
 	// 2. Transcribe audio using OpenAI Whisper
-	transcription, err := transcribeAudio(openaiKey, audioPath)
+	transcription, err := transcribeAudio(openaiKey, audioPath, verbose) // Pass verbose flag
 	if err != nil {
 		log.Fatalf("Error transcribing audio: %v", err)
 	}
-	fmt.Println("\n--- Transcription (OpenAI Whisper) ---")
-	fmt.Println(transcription)
-	fmt.Println("--------------------------------------")
+	if verbose {
+		fmt.Println("\n--- Transcription (OpenAI Whisper) ---")
+		fmt.Println(transcription)
+		fmt.Println("--------------------------------------")
+	}
 
 	// 3. Generate title/description using Ollama
-	title, description, err := generateTitleDescription(ollamaEndpoint, generateModel, transcription)
+	title, description, err := generateTitleDescription(ollamaEndpoint, generateModel, transcription, verbose) // Pass verbose flag
 	if err != nil {
 		log.Fatalf("Error generating title/description: %v", err)
 	}
 
-	// 4. Print results
+	// 4. Print results (Always print final result)
 	fmt.Println("\n--- Generated YouTube Info ---")
 	fmt.Printf("Title: %s\n", title)
 	fmt.Printf("Description: %s\n", description)
@@ -104,8 +113,10 @@ func runYtCommand(cmd *cobra.Command, args []string) {
 }
 
 // extractAudio extracts audio from a video file using ffmpeg and saves it as a temporary WAV file.
-func extractAudio(videoPath string) (string, error) {
-	fmt.Println("Extracting audio...")
+func extractAudio(videoPath string, verbose bool) (string, error) { // Add verbose parameter
+	if verbose {
+		fmt.Println("Extracting audio...")
+	}
 
 	tempFile, err := os.CreateTemp("", "audio-*.wav")
 	if err != nil {
@@ -126,7 +137,9 @@ func extractAudio(videoPath string) (string, error) {
 		return tempFileName, fmt.Errorf("failed to get stderr pipe: %w", err)
 	}
 
-	fmt.Printf("Running ffmpeg command: %s\n", strings.Join(cmd.Args, " "))
+	if verbose {
+		fmt.Printf("Running ffmpeg command: %s\n", strings.Join(cmd.Args, " "))
+	}
 	if err := cmd.Start(); err != nil {
 		os.Remove(tempFileName)
 		return "", fmt.Errorf("failed to start ffmpeg command: %w", err)
@@ -136,7 +149,7 @@ func extractAudio(videoPath string) (string, error) {
 
 	err = cmd.Wait()
 
-	if len(slurp) > 0 {
+	if verbose && len(slurp) > 0 { // Only print stderr if verbose
 		fmt.Fprintf(os.Stderr, "\n--- ffmpeg stderr ---\n%s\n---------------------\n", string(slurp))
 	}
 
@@ -153,16 +166,20 @@ func extractAudio(videoPath string) (string, error) {
 
 	if fileInfo.Size() == 0 {
 		os.Remove(tempFileName)
-		return "", fmt.Errorf("ffmpeg ran successfully but produced an empty audio file. Check video source or ffmpeg logs (stderr printed above)")
+		return "", fmt.Errorf("ffmpeg ran successfully but produced an empty audio file. Check video source or ffmpeg logs (stderr printed above if verbose)")
 	}
 
-	fmt.Printf("Audio extracted successfully to: %s (Size: %d bytes)\n", tempFileName, fileInfo.Size())
+	if verbose {
+		fmt.Printf("Audio extracted successfully to: %s (Size: %d bytes)\n", tempFileName, fileInfo.Size())
+	}
 	return tempFileName, nil
 }
 
 // transcribeAudio sends the audio file to OpenAI for transcription.
-func transcribeAudio(openaiKey, audioPath string) (string, error) {
-	fmt.Println("Transcribing audio using OpenAI Whisper...")
+func transcribeAudio(openaiKey, audioPath string, verbose bool) (string, error) { // Add verbose parameter
+	if verbose {
+		fmt.Println("Transcribing audio using OpenAI Whisper...")
+	}
 
 	client := openai.NewClient(openaiKey)
 	ctx := context.Background()
@@ -172,16 +189,20 @@ func transcribeAudio(openaiKey, audioPath string) (string, error) {
 		FilePath: audioPath,
 	}
 
-	fmt.Printf("Sending audio file %s to OpenAI Whisper...\n", audioPath)
+	if verbose {
+		fmt.Printf("Sending audio file %s to OpenAI Whisper...\n", audioPath)
+	}
 
 	resp, err := client.CreateTranscription(ctx, req)
 	if err != nil {
 		return "", fmt.Errorf("openai transcription request failed: %w", err)
 	}
 
-	fmt.Println("Transcription received from OpenAI.")
+	if verbose {
+		fmt.Println("Transcription received from OpenAI.")
+	}
 
-	if resp.Text == "" {
+	if resp.Text == "" && verbose { // Only warn if verbose
 		fmt.Println("Warning: OpenAI Whisper returned an empty transcription.")
 	}
 
@@ -189,8 +210,10 @@ func transcribeAudio(openaiKey, audioPath string) (string, error) {
 }
 
 // generateTitleDescription sends the transcription to Ollama to generate a title and description.
-func generateTitleDescription(ollamaEndpoint, modelName, transcription string) (title string, description string, err error) {
-	fmt.Println("Generating title and description...")
+func generateTitleDescription(ollamaEndpoint, modelName, transcription string, verbose bool) (title string, description string, err error) { // Add verbose parameter
+	if verbose {
+		fmt.Println("Generating title and description...")
+	}
 
 	parsedURL, err := url.Parse(ollamaEndpoint)
 	if err != nil {
@@ -211,13 +234,15 @@ func generateTitleDescription(ollamaEndpoint, modelName, transcription string) (
 		Stream: func(b bool) *bool { return &b }(false),
 	}
 
-	fmt.Printf("Sending transcription to model %s for generation...\n", modelName)
+	if verbose {
+		fmt.Printf("Sending transcription to model %s for generation...\n", modelName)
+	}
 
 	ctx := context.Background()
 	var generatedText string
 	err = client.Generate(ctx, req, func(res api.GenerateResponse) error {
 		generatedText += res.Response
-		if res.Done {
+		if res.Done && verbose { // Only print if verbose
 			fmt.Println("Title/Description received from Ollama.")
 		}
 		return nil
@@ -243,8 +268,10 @@ func generateTitleDescription(ollamaEndpoint, modelName, transcription string) (
 	}
 
 	if title == "" || description == "" {
-		fmt.Println("Warning: Could not parse title/description from Ollama response. Outputting raw response.")
-		fmt.Println("Raw response:", generatedText)
+		if verbose { // Only warn if verbose
+			fmt.Println("Warning: Could not parse title/description from Ollama response. Outputting raw response.")
+			fmt.Println("Raw response:", generatedText)
+		}
 		if title == "" {
 			title = "Failed to parse title"
 		}
