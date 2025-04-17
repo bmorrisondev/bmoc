@@ -32,6 +32,8 @@ func NotionExportToMarkdown(zipPath string, postContent *string, imgPathPrefix s
 		log.Fatal(err)
 	}
 
+	log.Println(fileArr)
+
 	if len(fileArr) == 1 {
 		title := ""
 		subtitle := ""

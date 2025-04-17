@@ -1,11 +1,11 @@
 /*
 Copyright © 2022 NAME HERE <EMAIL ADDRESS>
-
 */
 package cmd
 
 import (
 	"bmoc/cmd/commands/bm"
+	"bmoc/cmd/commands/clerk"
 	"bmoc/cmd/commands/config"
 	"bmoc/cmd/commands/ps"
 	"fmt"
@@ -41,6 +41,7 @@ func init() {
 	rootCmd.AddCommand(ps.PsCmd)
 	rootCmd.AddCommand(bm.BmCommand)
 	rootCmd.AddCommand(IdCommand)
+	rootCmd.AddCommand(clerk.ClerkCmd)
 }
 
 func initConfig() {
@@ -55,8 +56,8 @@ func initConfig() {
 
 	viper.AutomaticEnv()
 
-	err = viper.ReadInConfig()
-	if err != nil {
-		log.Fatal("Unable to load configuration file")
-	}
+	viper.ReadInConfig()
+	// if err != nil {
+	// 	log.Fatal("Unable to load configuration file")
+	// }
 }
