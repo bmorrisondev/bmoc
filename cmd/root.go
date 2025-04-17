@@ -1,5 +1,5 @@
 /*
-Copyright © 2022 NAME HERE <EMAIL ADDRESS>
+Copyright 2022 NAME HERE 
 */
 package cmd
 
@@ -8,6 +8,7 @@ import (
 	"bmoc/cmd/commands/clerk"
 	"bmoc/cmd/commands/config"
 	"bmoc/cmd/commands/ps"
+	"bmoc/cmd/commands/yt"
 	"fmt"
 	"log"
 	"os"
@@ -42,6 +43,7 @@ func init() {
 	rootCmd.AddCommand(bm.BmCommand)
 	rootCmd.AddCommand(IdCommand)
 	rootCmd.AddCommand(clerk.ClerkCmd)
+	rootCmd.AddCommand(yt.YtCmd)
 }
 
 func initConfig() {
